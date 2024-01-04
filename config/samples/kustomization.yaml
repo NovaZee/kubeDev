@@ -1,0 +1,4 @@
+## Append samples of your project ##
+resources:
+- hanweb_v1beta1_jpaas.yaml
+#+kubebuilder:scaffold:manifestskustomizesamples

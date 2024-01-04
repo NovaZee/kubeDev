@@ -1,0 +1,31 @@
+# permissions for end users to edit jpaas.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: clusterrole
+    app.kubernetes.io/instance: jpaas-editor-role
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: kubedev
+    app.kubernetes.io/part-of: kubedev
+    app.kubernetes.io/managed-by: kustomize
+  name: jpaas-editor-role
+rules:
+- apiGroups:
+  - hanweb.jpaas.dev
+  resources:
+  - jpaas
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - hanweb.jpaas.dev
+  resources:
+  - jpaas/status
+  verbs:
+  - get

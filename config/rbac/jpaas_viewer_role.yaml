@@ -1,0 +1,27 @@
+# permissions for end users to view jpaas.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: clusterrole
+    app.kubernetes.io/instance: jpaas-viewer-role
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: kubedev
+    app.kubernetes.io/part-of: kubedev
+    app.kubernetes.io/managed-by: kustomize
+  name: jpaas-viewer-role
+rules:
+- apiGroups:
+  - hanweb.jpaas.dev
+  resources:
+  - jpaas
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - hanweb.jpaas.dev
+  resources:
+  - jpaas/status
+  verbs:
+  - get

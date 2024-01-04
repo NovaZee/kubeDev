@@ -1,0 +1,12 @@
+apiVersion: hanweb.jpaas.dev/v1beta1
+kind: JPaas
+metadata:
+  labels:
+    app.kubernetes.io/name: jpaas
+    app.kubernetes.io/instance: jpaas-sample
+    app.kubernetes.io/part-of: kubedev
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: kubedev
+  name: jpaas-sample
+spec:
+  # TODO(user): Add fields here
