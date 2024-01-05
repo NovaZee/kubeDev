@@ -1,0 +1,18 @@
+apiVersion: hanweb.jpaas.deploy/v1beta1
+kind: JPaas
+metadata:
+  labels:
+    app.kubernetes.io/name: jpaas
+    app.kubernetes.io/instance: jpaas-sample
+    app.kubernetes.io/part-of: kubedev
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: kubedev
+  name: {{.ObjectMeta.Name}}
+  namespace: {{.Spec.Namespace}}
+spec:
+  namespace: {{.Spec.Namespace}}
+  image: {{.Spec.Image}}
+  replicas: {{.Spec.Replicas}}
+  version: {{.Spec.Version}}
+  version_aligned: {{.Spec.VersionAligned}}
+  type: {{.Spec.Type}}
