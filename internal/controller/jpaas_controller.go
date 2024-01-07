@@ -80,7 +80,7 @@ func (r *JPaasReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 				}
 			}
 			// 初始化deployment
-			deployment := utils.NewDeployment(JPaas)
+			deployment := utils.NewDeployment(crd)
 			if err := controllerutil.SetControllerReference(JPaas, deployment, r.Scheme); err != nil {
 				return ctrl.Result{}, err
 			}
