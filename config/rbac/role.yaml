@@ -30,3 +30,29 @@ rules:
   - get
   - patch
   - update
+- apiGroups:
+  - hanweb.jpaas.deploy
+  resources:
+  - jpaasapps
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - hanweb.jpaas.deploy
+  resources:
+  - jpaasapps/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - hanweb.jpaas.deploy
+  resources:
+  - jpaasapps/status
+  verbs:
+  - get
+  - patch
+  - update

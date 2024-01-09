@@ -10,12 +10,12 @@ metadata:
   name: jpaas-v1
 spec:
   namespace: default
-  replicas: 1
   version: "0.1"
-  version_aligned: false
-  type: Platform
-  app_refs:
+  versionAligned: false
+  appRefs:
     - name: common-nginx
       version: "0.1"
       image: nginx:1.7.9
-      status: false
+  Initialized: false
+  name: jpaas-v1
+  needUpgrade: false

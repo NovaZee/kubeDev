@@ -92,8 +92,18 @@ func main() {
 	if err = (&controller.JPaasReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
+		Handler: &controller.JPaasHandler{
+			Check: controller.NewJPaasChecker(ctrl.Log.WithName("controllers").WithName("JPaasCluster")),
+		},
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "JPaas")
+		setupLog.Error(err, "unable to create controller", "controller", "client")
+		os.Exit(1)
+	}
+	if err = (&controller.JPaasAppReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "JPaasApp")
 		os.Exit(1)
 	}
 	//+kubebuilder:scaffold:builder

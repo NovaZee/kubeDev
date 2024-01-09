@@ -17,7 +17,7 @@ limitations under the License.
 package v1beta1
 
 import (
-	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -43,36 +43,37 @@ type JPaasSpec struct {
 
 	//应用基础属性
 	//image当应用类型为Platform时，image可以忽略
-	Namespace string          `json:"namespace"`
-	Image     string          `json:"image,omitempty"`
-	Replicas  int32           `json:"replicas"`
-	Version   string          `json:"version"`
-	Env       []corev1.EnvVar `json:"env,omitempty"`
+	Namespace   string      `json:"namespace"`
+	Name        string      `json:"name"`
+	Version     string      `json:"version"`
+	Status      bool        `json:"status,omitempty"`
+	Initialized bool        `json:"Initialized"`
+	NeedUpgrade bool        `json:"needUpgrade"`
+	CommonEnv   []v1.EnvVar `json:"commonEnv,omitempty"`
 	//应用是否强依赖
-	VersionAligned bool `json:"version_aligned"`
-	//crd 类型 Init代表JPaas初始化 App代表是具体应用的crd
-	//如果是Platform类型，AppRefs为依赖基础应用，如果是Application类型，AppRefs是对应app以来的产品以及版本
-	Type    Type     `json:"type,omitempty"`
-	AppRefs []AppRef `json:"app_refs,omitempty"`
+	VersionAligned bool      `json:"versionAligned"`
+	AppRefs        []AppSpec `json:"appRefs,omitempty"`
 }
 
 // JPaasStatus defines the observed state of JPaas
 type JPaasStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
+	Conditions []Condition `json:"conditions,omitempty"`
 }
 
-type AppRef struct {
+type AppSpec struct {
 	Name    string `json:"name"`
-	Image   string `json:"image"`
+	Image   string `json:"image,omitempty"`
 	Version string `json:"version"`
-	Status  bool   `json:"status"`
+	//基础应用类型,业务应用类型
+	Type            Type `json:"type,omitempty"`
+	JPaasAppSuccess bool `json:"jpaasapp_success,omitempty"`
 }
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
-// +kubebuilder:printcolumn:name="namespace",type="string",JSONPath=".spec.namespace",description="The namespace of Paas"
-// +kubebuilder:printcolumn:name="Type",type="string",JSONPath=".spec.type",description="The type of JPaas"
+// +kubebuilder:printcolumn:name="Type",type="string",JSONPath=".spec.type",description="The type of client"
 // +kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.conditions[].type",description="The status of Redis Cluster"
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp",description="The age of the resource"
 

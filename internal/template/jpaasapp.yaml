@@ -1,0 +1,22 @@
+apiVersion: hanweb.jpaas.deploy/v1beta1
+kind: JPaasApp
+metadata:
+  labels:
+    app.kubernetes.io/name: jpaas
+    app.kubernetes.io/instance: {{(index .Spec.AppRefs 0).Name}}
+    app.kubernetes.io/part-of: kubedev
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: kubedev
+  name: {{(index .Spec.AppRefs 0).Name}}
+  namespace: {{.ObjectMeta.Namespace}}
+spec:
+  image: {{(index .Spec.AppRefs 0).Image}}
+  replicas: 1
+  version: {{(index .Spec.AppRefs 0).Version}}
+  env: {{.Spec.CommonEnv}}
+  health: false
+  type: {{(index .Spec.AppRefs 0).Type}}
+  resources:
+    limits:
+      cpu: 100m
+      memory: 100Mi

@@ -17,4 +17,13 @@ resources:
   kind: JPaas
   path: github.com/NovaZee/kubeDev/api/v1beta1
   version: v1beta1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: jpaas.deploy
+  group: hanweb
+  kind: JPaasApp
+  path: github.com/NovaZee/kubeDev/api/v1beta1
+  version: v1beta1
 version: "3"
