@@ -43,13 +43,15 @@ type JPaasSpec struct {
 
 	//应用基础属性
 	//image当应用类型为Platform时，image可以忽略
-	Namespace   string      `json:"namespace"`
-	Name        string      `json:"name"`
-	Version     string      `json:"version"`
-	Status      bool        `json:"status,omitempty"`
-	Initialized bool        `json:"Initialized"`
-	NeedUpgrade bool        `json:"needUpgrade"`
-	CommonEnv   []v1.EnvVar `json:"commonEnv,omitempty"`
+	Namespace   string `json:"namespace"`
+	Name        string `json:"name"`
+	Version     string `json:"version"`
+	Status      bool   `json:"status,omitempty"`
+	Initialized bool   `json:"Initialized"`
+	NeedUpgrade bool   `json:"needUpgrade"`
+	// 镜像前缀地址 除了版本号
+	ImageUrl  string      `json:"imageUrl,omitempty"`
+	CommonEnv []v1.EnvVar `json:"commonEnv,omitempty"`
 	//应用是否强依赖
 	VersionAligned bool      `json:"versionAligned"`
 	AppRefs        []AppSpec `json:"appRefs,omitempty"`
@@ -63,12 +65,13 @@ type JPaasStatus struct {
 }
 
 type AppSpec struct {
-	Name    string `json:"name"`
-	Image   string `json:"image,omitempty"`
-	Version string `json:"version"`
+	Name        string `json:"name"`
+	AccessScope Scope  `json:"accessScope,omitempty"`
+	Version     string `json:"version"`
 	//基础应用类型,业务应用类型
-	Type            Type `json:"type,omitempty"`
-	JPaasAppSuccess bool `json:"jpaasapp_success,omitempty"`
+	Type Type `json:"type,omitempty"`
+	// failed,uninitialized,deleted,available,upgrading
+	AppCrStatus ConditionType `json:"appCrStatus"`
 }
 
 //+kubebuilder:object:root=true

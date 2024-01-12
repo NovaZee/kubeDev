@@ -52,10 +52,12 @@ spec:
               appRefs:
                 items:
                   properties:
-                    image:
+                    accessScope:
+                      description: ConditionType defines the condition
                       type: string
-                    jpaasapp_success:
-                      type: boolean
+                    appCrStatus:
+                      description: failed,uninitialized,deleted,available,upgrading
+                      type: string
                     name:
                       type: string
                     type:
@@ -64,6 +66,7 @@ spec:
                     version:
                       type: string
                   required:
+                  - appCrStatus
                   - name
                   - version
                   type: object
@@ -176,6 +179,9 @@ spec:
                   - name
                   type: object
                 type: array
+              imageUrl:
+                description: 镜像前缀地址 除了版本号
+                type: string
               name:
                 type: string
               namespace:

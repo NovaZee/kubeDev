@@ -1,6 +1,8 @@
 apiVersion: hanweb.jpaas.deploy/v1beta1
 kind: JPaas
 metadata:
+  finalizers:
+    - hanweb.jpaas.deploy/finalizer
   labels:
     app.kubernetes.io/name: jpaas
     app.kubernetes.io/instance: jpaas-sample
@@ -12,10 +14,12 @@ spec:
   namespace: default
   version: "0.1"
   versionAligned: false
+  imageUrl: nginx
   appRefs:
     - name: common-nginx
-      version: "0.1"
-      image: nginx:1.7.9
+      version: 1.7.9
+      accessScope: NodePort
+      appCrStatus: Uninitialized
   Initialized: false
   name: jpaas-v1
   needUpgrade: false

@@ -18,8 +18,11 @@ package main
 
 import (
 	"flag"
+	appsv1 "k8s.io/api/apps/v1"
+	batchv1 "k8s.io/api/batch/v1"
+	corev1 "k8s.io/api/core/v1"
+	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 	"os"
-
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
@@ -43,6 +46,10 @@ var (
 )
 
 func init() {
+	appsv1.AddToScheme(scheme)
+	batchv1.AddToScheme(scheme)
+	corev1.AddToScheme(scheme)
+	extensionsv1beta1.AddToScheme(scheme)
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
 	utilruntime.Must(hanwebv1beta1.AddToScheme(scheme))
@@ -88,8 +95,8 @@ func main() {
 		setupLog.Error(err, "unable to start manager")
 		os.Exit(1)
 	}
-
 	if err = (&controller.JPaasReconciler{
+		Log:    ctrl.Log.WithName("controllers").WithName("JPaas"),
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
 		Handler: &controller.JPaasHandler{
@@ -99,13 +106,16 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "client")
 		os.Exit(1)
 	}
+
 	if err = (&controller.JPaasAppReconciler{
+		Log:    ctrl.Log.WithName("controllers").WithName("JPaasApp"),
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "JPaasApp")
 		os.Exit(1)
 	}
+
 	//+kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {

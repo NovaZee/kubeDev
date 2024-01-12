@@ -6,7 +6,8 @@ metadata:
   labels:
     app: {{.ObjectMeta.Name}}
 spec:
-  replicas: {{.Spec.Replicas}}
+  replicas: {{.Spec.EmbeddedResource.Replicas}}
+  type: {{.Spec.EmbeddedResource.AccessScope}}
   selector:
     matchLabels:
       app: {{.ObjectMeta.Name}}
@@ -17,6 +18,6 @@ spec:
     spec:
       containers:
         - name: {{.ObjectMeta.Name}}
-          image: {{if eq .Spec.Type "Platform"}}platform-default-image{{else}}{{.Spec.Image}}{{end}}
+          image: {{.Spec.Image.Name}}
           ports:
             - containerPort: 8080

@@ -1,8 +1,6 @@
 package controller
 
 import (
-	"context"
-	hanwebv1beta1 "github.com/NovaZee/kubeDev/api/v1beta1"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
@@ -12,5 +10,9 @@ type JPaasHandler struct {
 }
 
 type Reconciler interface {
-	InitReconcile(ctx context.Context, instance *hanwebv1beta1.JPaas, req ctrl.Request) (ctrl.Result, error)
+	PaasReconcile() (ctrl.Result, error)
+}
+
+type Process interface {
+	Init() (ctrl.Result, error)
 }
