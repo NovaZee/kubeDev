@@ -4,6 +4,7 @@ metadata:
   name: {{.ObjectMeta.Name}}
   namespace: {{.ObjectMeta.Namespace}}
 spec:
+  type: {{.Spec.EmbeddedResource.AccessScope}}
   selector:
     app: {{.ObjectMeta.Name}}
   ports:
@@ -11,4 +12,3 @@ spec:
       port: 8080
       protocol: TCP
       targetPort: 80
-      nodePort: 30001

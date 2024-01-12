@@ -18,18 +18,21 @@ package controller
 
 import (
 	"context"
-
+	hanwebv1beta1 "github.com/NovaZee/kubeDev/api/v1beta1"
+	hanwebv1client "github.com/NovaZee/kubeDev/client"
+	"github.com/go-logr/logr"
+	appv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/log"
-
-	hanwebv1beta1 "github.com/NovaZee/kubeDev/api/v1beta1"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 // JPaasAppReconciler reconciles a JPaasApp object
 type JPaasAppReconciler struct {
 	client.Client
+	Log    logr.Logger
 	Scheme *runtime.Scheme
 }
 
@@ -47,9 +50,19 @@ type JPaasAppReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.16.3/pkg/reconcile
 func (r *JPaasAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = log.FromContext(ctx)
+	var log = r.Log.WithValues(
+		"JPaas", req.NamespacedName)
+	log.Info("JPaasAppReconciler Start")
+	defer log.Info("JPaasAppReconciler End")
 
-	// TODO(user): your logic here
+	paasAppCr, err := hanwebv1client.NewJPaasAppCR(ctx, req, log, r.Client, r.Scheme)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+	paasReconcile, err := paasAppCr.PaasAppReconcile()
+	if err != nil {
+		return paasReconcile, err
+	}
 
 	return ctrl.Result{}, nil
 }
@@ -58,5 +71,8 @@ func (r *JPaasAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 func (r *JPaasAppReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&hanwebv1beta1.JPaasApp{}).
+		Owns(&appv1.Deployment{}).
+		Owns(&corev1.Service{}).
+		Owns(&corev1.Pod{}).
 		Complete(r)
 }

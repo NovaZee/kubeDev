@@ -30,4 +30,18 @@ const (
 	ConditionCreating                = "Creating"
 	ConditionUpgrading               = "Upgrading"
 	ConditionFailed                  = "Failed"
+	ConditionDeleted                 = "Deleted"
+	ConditionUnInit                  = "Uninitialized"
+)
+
+// ConditionType defines the condition
+type Scope string
+
+// AccessScope defines the access scope of service.
+const (
+	AccessScopeCluster  Scope = "Cluster"
+	AccessScopeVPC      Scope = "VPC"
+	AccessScopeExternal       = "External"
+	AccessScopeNodePort       = "NodePort"
+	AccessScopeHeadless       = "Headless"
 )

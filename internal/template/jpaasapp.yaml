@@ -10,8 +10,13 @@ metadata:
   name: {{(index .Spec.AppRefs 0).Name}}
   namespace: {{.ObjectMeta.Namespace}}
 spec:
-  image: {{(index .Spec.AppRefs 0).Image}}
-  replicas: 1
+  image:
+    name: {{printf "%s:%s" .Spec.ImageUrl (index .Spec.AppRefs 0).Version}}
+  embeddedResource:
+    replicas: 1
+    accessScope: {{(index .Spec.AppRefs 0).AccessScope}}
+    ports:
+      default: 8080
   version: {{(index .Spec.AppRefs 0).Version}}
   env: {{.Spec.CommonEnv}}
   health: false
