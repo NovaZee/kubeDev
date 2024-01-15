@@ -7,6 +7,7 @@ import (
 	"github.com/go-logr/logr"
 	"io"
 	"net/http"
+	"os"
 )
 
 type JPaasCheck interface {
@@ -26,7 +27,8 @@ func NewJPaasChecker(logger logr.Logger) *JPaasChecker {
 }
 
 func (jc JPaasChecker) CheckHealthy(JPaasCluster *v1beta1.JPaas) (bool, error) {
-	resp, err := http.Get("http://common-live-server.api-gateway.svc.cluster.local/health")
+	podIP := os.Getenv("POD_IP")
+	resp, err := http.Get(fmt.Sprintf("http://%s/health", podIP))
 	if err != nil {
 		return false, fmt.Errorf("failed to send request: %v", err)
 	}

@@ -56,3 +56,21 @@ rules:
   - get
   - patch
   - update
+- apiGroups:
+  - hanweb.jpaas.deploy
+  resources:
+  - services
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - hanweb.jpaas.deploy
+  resources:
+  - services/status
+  verbs:
+  - get

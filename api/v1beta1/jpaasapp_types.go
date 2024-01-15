@@ -31,8 +31,6 @@ type JPaasAppSpec struct {
 	Image            ImageSpec            `json:"image"`
 	EmbeddedResource EmbeddedResourceSpec `json:"embeddedResource"`
 	Env              []corev1.EnvVar      `json:"env,omitempty"`
-	//是否健康检查
-	Health bool `json:"health,omitempty"`
 	//基础应用类型,业务应用类型
 	Type Type `json:"type,omitempty"`
 }
@@ -57,17 +55,12 @@ type EmbeddedResourceSpec struct {
 	VolumeMounts []corev1.VolumeMount `json:"volumeMounts,omitempty"`
 }
 
-// Ports defines ports of app.
+// Ports defines ports of app. default 8080
 type Ports struct {
-
-	// Ws port, default: 443.
-	Ws *int32 `json:"ws,omitempty"`
-
-	// Front port, default: 8080.
-	Default *int32 `json:"default,omitempty"`
-
-	// UI port, default: 8081.
-	UI *int32 `json:"ui,omitempty"`
+	Name      string `json:"name"`
+	Port      int32  `json:"port"`
+	Scope     Scope  `json:"scope"`
+	FinalPort int32  `json:"finalPort,omitempty"`
 }
 
 // ImageSpec defines image ofcontainers.
@@ -88,19 +81,20 @@ type JPaasAppStatus struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
 	// The overall state of the app
-	State          string           `json:"state"`
-	Components     ComponentsStatus `json:"components"`
-	ComponentsInit bool             `json:"componentsInit"`
+	State      ConditionType     `json:"state"`
+	Components *ComponentsStatus `json:"components"`
 	// Last update timestamp for this status.
 	LastUpdateTime string `json:"lastUpdateTime,omitempty"`
+	//是否健康检查 不采用http probe,和crd实现冲突
+	Health Healthy `json:"health"`
 }
 
 type ComponentsStatus struct {
 	// The state of JobManager StatefulSet.
-	AppDeployment AppComponentsStatus `json:"jobManagerStatefulSet"`
+	AppDeployment AppComponentsStatus `json:"appDeployment"`
 
-	// The state of JobManager service.
-	AppService AppComponentServiceStatus `json:"jobManagerService"`
+	// The state of JobManager service.只记录health端口状态
+	AppService AppComponentServiceStatus `json:"appService"`
 
 	// The state of JobManager ingress.
 	// The state of TaskManager StatefulSet.
@@ -131,6 +125,7 @@ type AppComponentServiceStatus struct {
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Type",type="string",JSONPath=".spec.type",description="The type of client"
+// +kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.health",description="The status of paasApp"
 
 // JPaasApp is the Schema for the jpaasapps API
 type JPaasApp struct {

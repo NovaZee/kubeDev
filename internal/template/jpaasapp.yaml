@@ -16,7 +16,9 @@ spec:
     replicas: 1
     accessScope: {{(index .Spec.AppRefs 0).AccessScope}}
     ports:
-      default: 8080
+      port: 8080
+      Scope: NodePort
+      Name: Health
   version: {{(index .Spec.AppRefs 0).Version}}
   env: {{.Spec.CommonEnv}}
   health: false

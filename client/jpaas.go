@@ -8,6 +8,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"strings"
 )
 
@@ -36,10 +37,14 @@ func NewJPaasCR(ctx context.Context, req ctrl.Request, log logr.Logger, c client
 }
 
 func (jc *JPaasCR) PaasReconcile() (ctrl.Result, error) {
-	if !jc.paas.Spec.Initialized {
-		return jc.Init()
+	err := jc.Finalizer()
+	if err != nil {
+		return ctrl.Result{}, err
 	}
-	err := jc.checkAppCr()
+	if !jc.paas.Spec.Initialized {
+		return ctrl.Result{}, jc.InspectionInit()
+	}
+	err = jc.checkAppCr()
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -48,7 +53,7 @@ func (jc *JPaasCR) PaasReconcile() (ctrl.Result, error) {
 	return ctrl.Result{}, nil
 }
 
-func (jc *JPaasCR) Init() (ctrl.Result, error) {
+func (jc *JPaasCR) InspectionInit() error {
 	// condition 1: 部署platform,根据platform的依赖关系，部署基础应用
 	// 获取 base apps
 	var instance = jc.paas
@@ -63,9 +68,9 @@ func (jc *JPaasCR) Init() (ctrl.Result, error) {
 	instance.Spec.Initialized = true
 	if err := c.Update(ctx, instance); err != nil {
 		log.Error(err, "failed to update JPaas CRD", "crd", instance)
-		return ctrl.Result{}, nil
+		return nil
 	}
-	return ctrl.Result{}, nil
+	return nil
 }
 
 func (jc *JPaasCR) checkAppCr() error {
@@ -106,6 +111,43 @@ func initAppCr(app hanwebv1beta1.AppSpec, instance *hanwebv1beta1.JPaas, ctx con
 	} else {
 		// 如果CRD创建成功，更新JPaas CRD中AppRefs集合该资源的status为true
 		instance.Spec.AppRefs[i].AppCrStatus = hanwebv1beta1.ConditionAvailable
+	}
+	return nil
+}
+
+func (jc *JPaasCR) Finalizer() error {
+	var jpass = jc.paas
+	var ctx = jc.context
+	var r = jc.kubeClient
+	if jpass.ObjectMeta.DeletionTimestamp.IsZero() {
+		// The object is not being deleted, so if it does not have our finalizer,
+		// then lets add the finalizer and update the object. This is equivalent
+		// registering our finalizer.
+		if !controllerutil.ContainsFinalizer(jpass, JPaasAppFinalizerName) {
+			controllerutil.AddFinalizer(jpass, JPaasAppFinalizerName)
+			if err := r.Update(ctx, jpass); err != nil {
+				return err
+			}
+		}
+	} else {
+		// The object is being deleted
+		if controllerutil.ContainsFinalizer(jpass, JPaasAppFinalizerName) {
+			//// our finalizer is present, so lets handle any external dependency
+			//if err := jc.JPaasAppFinalizerProcessing(); err != nil {
+			//	// if fail to delete the external dependency here, return with error
+			//	// so that it can be retried
+			//	return err
+			//}
+
+			// remove our finalizer from the list and update it.
+			controllerutil.RemoveFinalizer(jpass, JPaasAppFinalizerName)
+			if err := r.Update(ctx, jpass); err != nil {
+				return err
+			}
+		}
+
+		// Stop reconciliation as the item is being deleted
+		return nil
 	}
 	return nil
 }

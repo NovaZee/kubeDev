@@ -19,6 +19,10 @@ spec:
       jsonPath: .spec.type
       name: Type
       type: string
+    - description: The status of paasApp
+      jsonPath: .status.health
+      name: Status
+      type: string
     name: v1beta1
     schema:
       openAPIV3Schema:
@@ -48,18 +52,21 @@ spec:
                   ports:
                     description: Ports.
                     properties:
-                      default:
-                        description: 'Front port, default: 8080.'
+                      finalPort:
                         format: int32
                         type: integer
-                      ui:
-                        description: 'UI port, default: 8081.'
+                      name:
+                        type: string
+                      port:
                         format: int32
                         type: integer
-                      ws:
-                        description: 'Ws port, default: 443.'
-                        format: int32
-                        type: integer
+                      scope:
+                        description: ConditionType defines the condition
+                        type: string
+                    required:
+                    - name
+                    - port
+                    - scope
                     type: object
                   replicas:
                     description: The number of replicas.
@@ -1887,9 +1894,6 @@ spec:
                   - name
                   type: object
                 type: array
-              health:
-                description: 是否健康检查
-                type: boolean
               image:
                 description: 'INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
                   Important: Run "make" to regenerate code after modifying this file'
@@ -1930,8 +1934,21 @@ spec:
             properties:
               components:
                 properties:
-                  jobManagerService:
-                    description: The state of JobManager service.
+                  appDeployment:
+                    description: The state of JobManager StatefulSet.
+                    properties:
+                      name:
+                        description: The resource name of the component.
+                        type: string
+                      state:
+                        description: The state of the component.
+                        type: string
+                    required:
+                    - name
+                    - state
+                    type: object
+                  appService:
+                    description: The state of JobManager service.只记录health端口状态
                     properties:
                       name:
                         description: The name of the Kubernetes jobManager service.
@@ -1948,25 +1965,13 @@ spec:
                     - name
                     - state
                     type: object
-                  jobManagerStatefulSet:
-                    description: The state of JobManager StatefulSet.
-                    properties:
-                      name:
-                        description: The resource name of the component.
-                        type: string
-                      state:
-                        description: The state of the component.
-                        type: string
-                    required:
-                    - name
-                    - state
-                    type: object
                 required:
-                - jobManagerService
-                - jobManagerStatefulSet
+                - appDeployment
+                - appService
                 type: object
-              componentsInit:
-                type: boolean
+              health:
+                description: 是否健康检查 不采用http probe,和crd实现冲突
+                type: string
               lastUpdateTime:
                 description: Last update timestamp for this status.
                 type: string
@@ -1975,7 +1980,7 @@ spec:
                 type: string
             required:
             - components
-            - componentsInit
+            - health
             - state
             type: object
         type: object

@@ -8,7 +8,8 @@ spec:
   selector:
     app: {{.ObjectMeta.Name}}
   ports:
-    - name: http
+    - name: health
       port: 8080
       protocol: TCP
       targetPort: 80
+status: {}

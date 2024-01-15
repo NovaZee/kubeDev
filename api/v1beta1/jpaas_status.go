@@ -45,3 +45,10 @@ const (
 	AccessScopeNodePort       = "NodePort"
 	AccessScopeHeadless       = "Headless"
 )
+
+type Healthy string
+
+const (
+	HealthTrue  Healthy = "healthy"
+	HealthFalse Healthy = "unhealthy"
+)

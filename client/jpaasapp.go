@@ -2,17 +2,19 @@ package client
 
 import (
 	"context"
+	"fmt"
 	hanwebv1beta1 "github.com/NovaZee/kubeDev/api/v1beta1"
 	utils "github.com/NovaZee/kubeDev/internal/util"
 	"github.com/go-logr/logr"
 	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"net/http"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"time"
 )
 
 type JPaasAppCR struct {
@@ -40,40 +42,92 @@ func NewJPaasAppCR(ctx context.Context, req ctrl.Request, log logr.Logger, c cli
 }
 
 func (jac *JPaasAppCR) PaasAppReconcile() (ctrl.Result, error) {
+	// 每一步执行按照先后顺序,如果有错误,则返回错误,整个系统在当前节点存在问题,如果当前节点状态需要提交,则及时更新,避免在下一阶段失败时丢弃
+	// step zero: 优先级最高,调合前置判断 初始化/删除 status:state:creating/failed
+	//	1: 获取当前的cr,获取不到直接返回,不进行后续操作（后续判断是否在获取不到的时候检查父级CRD中的关联关系,如果存在则进行CR的初始化)
+	//	2: 判断DeletionTimestamp,判断当前操作是否为删除操作,如果是删除操作,则执行删除操作,并且返回,不进行后续操作
+	// step one: 资源初始化 status:state:deleted
+	//	1: 轮询检查资源是否存在,如果不存在,则创建,如果资源存在,不对改资源进行创建操作,轮询结束后会进行下一步操作,
+	//     及时更新状态代表当前阶段完成,否则在下一阶段异常时会丢弃当前阶段的状态
+	// step two: 运行时调合  status:state:upgrading/running status:health:healthFalse/healthTrue
+	//	1: 调合当前资源的状态,平台应用通过health接口即可判断应用是否正常,http调用超时时间为1s,调用health接口返回200则为正常,其他状态码为异常,
+	//	   如果异常,则返回错误,延迟15s后再次调用(该时间在java程序初始化的时候,会有一定的延迟,需要较大的延迟时间来回调)
+	// step final: 更新状态
+	//	1: 更新当前cr的状态,如果更新失败,则返回错误,不进行后续操作
+	//	2: 更新当前cr,如果更新失败,则返回错误,不进行后续操作
 	var log = jac.log
-	// ========step one==========
-	err := jac.inspectionInit()
+	// ========step zero:调合前置判断 初始化/删除==========
+	var jpaasApp = new(hanwebv1beta1.JPaasApp)
+	defer func() {
+		// ========step final更新状态==========
+		if jpaasApp != nil && jpaasApp.ObjectMeta.DeletionTimestamp.IsZero() {
+			err := jac.kubeClient.Status().Update(jac.context, jac.paasApp)
+			if err != nil {
+				log.Error(err, "Failed to update status app status")
+			}
+
+			err = jac.kubeClient.Update(jac.context, jac.paasApp)
+			if err != nil {
+				log.Error(err, "Failed to update app status")
+			}
+
+		}
+	}()
+	defer func() {
+		if err := recover(); err != nil {
+			log.Error(fmt.Errorf("%v", err), "panic")
+		}
+	}()
+	err := jac.inspectionCr(jpaasApp)
+	if err != nil {
+		// 当前业务应用的cr 不存在
+		if errors.IsNotFound(err) {
+			log.Error(err, "Failed to get the jpaasApp resource")
+			return ctrl.Result{}, nil
+		}
+		log.Info("inspection Application", "jpaasApp", "nil")
+		jpaasApp = nil
+		return ctrl.Result{}, err
+	} else {
+		log.Info("inspection Application", "jpaasApp", *jpaasApp)
+		jac.paasApp = jpaasApp
+		err = jac.Finalizer()
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+	}
+	// ========step one:资源初始化==========
+	err = jac.InspectionInit()
 	if err != nil {
 		log.Error(err, "Failed to inspection the current app state")
 		return ctrl.Result{}, err
 	}
-	// cr被删除了，需要重新创建
+	// RUNTIME
+	healthy := jac.CheckHealthy()
+	if !utils.Healthy(healthy) {
+		log.Info("CheckHealthy", "result", "App healthy False,RequeueAfter 15s")
+		return ctrl.Result{RequeueAfter: 15}, nil
+	}
+	log.Info("CheckHealthy", "result", healthy)
+	jac.paasApp.Status.Health = healthy
 	// ========step two==========
+
+	// ========step final更新状态==========
+	//err = jac.UpdateStatus(hanwebv1beta1.ConditionAvailable, healthy)
+	//if err != nil {
+	//	log.Error(err, "Failed to update status app status")
+	//	return ctrl.Result{}, err
+	//}
+
 	return ctrl.Result{}, nil
 }
 
-func (jac *JPaasAppCR) inspectionInit() error {
-	var jpaasApp = new(hanwebv1beta1.JPaasApp)
+func (jac *JPaasAppCR) InspectionInit() error {
+	var jpaasApp = jac.paasApp
 	var log = jac.log
 	var ctx = jac.context
 	var r = jac.kubeClient
-	err := jac.inspectionCr(jpaasApp)
-	if err != nil {
-		if errors.IsNotFound(err) {
-			log.Error(err, "Failed to get the jpaasApp resource")
-			return nil
-		}
-		log.Info("inspection Application", "jpaasApp", "nil")
-		jpaasApp = nil
-		//cr被删除了,更改jpaas cr 中该app status
-	} else {
-		log.Info("inspection Application", "jpaasApp", *jpaasApp)
-		jac.paasApp = jpaasApp
-		err = jac.finalizer()
-		if err != nil {
-			return err
-		}
-	}
+	var err error
 	var deployment = &v1.Deployment{}
 	var service = &corev1.Service{}
 	deploymentErr := jac.inspectionComponents(deployment)
@@ -99,7 +153,23 @@ func (jac *JPaasAppCR) inspectionInit() error {
 			log.Error(err, "create service failed")
 			return err
 		}
+		status := &hanwebv1beta1.ComponentsStatus{
+			AppService: hanwebv1beta1.AppComponentServiceStatus{
+				Name:  service.Name,
+				State: string(hanwebv1beta1.ConditionAvailable),
+			},
+		}
+		jpaasApp.Status.Components = status
+		jpaasApp.Status.Health = hanwebv1beta1.HealthFalse
+		jpaasApp.Status.LastUpdateTime = time.Now().Format(time.RFC3339)
+		jpaasApp.Status.State = hanwebv1beta1.ConditionCreating
+
 	}
+	err = jac.UpdateStatus(hanwebv1beta1.ConditionAvailable, hanwebv1beta1.HealthFalse)
+	if err != nil {
+		return err
+	}
+	jpaasApp.Spec.EmbeddedResource.Ports.FinalPort = utils.GetHealthClusterIpPort(service)
 	return nil
 }
 
@@ -121,20 +191,8 @@ func (jac *JPaasAppCR) inspectionService(
 		jac.context, jac.request.NamespacedName, service)
 }
 
-// ToOwnerReference the paas as owner reference for its child resources.
-func ToOwnerReference(
-	paasApp *hanwebv1beta1.JPaasApp) metav1.OwnerReference {
-	return metav1.OwnerReference{
-		APIVersion:         paasApp.APIVersion,
-		Kind:               paasApp.Kind,
-		Name:               paasApp.Name,
-		UID:                paasApp.UID,
-		Controller:         &[]bool{true}[0],
-		BlockOwnerDeletion: &[]bool{false}[0],
-	}
-}
-
-func (jac *JPaasAppCR) finalizer() error {
+// Finalizer app cr being deleted modify paas cr  APP status
+func (jac *JPaasAppCR) Finalizer() error {
 	var jpassApp = jac.paasApp
 	var ctx = jac.context
 	var r = jac.kubeClient
@@ -192,6 +250,44 @@ func (jac *JPaasAppCR) JPaasAppFinalizerProcessing() error {
 		if err := c.Update(ctx, &jpaas); err != nil {
 			return err
 		}
+	}
+	return nil
+}
+
+func (jac *JPaasAppCR) CheckHealthy() hanwebv1beta1.Healthy {
+	// 创建一个具有超时设置的 http.Client
+	client := &http.Client{
+		Timeout: time.Second * 1, // 设置超时时间为10秒
+	}
+	// 获取svc的ip
+	url := fmt.Sprintf("http://192.168.5.56:%d", jac.paasApp.Spec.EmbeddedResource.Ports.FinalPort)
+	resp, err := client.Get(url)
+	if err != nil {
+		jac.log.Info("CheckHealthy", "err", err)
+		return hanwebv1beta1.HealthFalse
+	}
+	defer resp.Body.Close()
+
+	// 检查HTTP状态码
+	if resp.StatusCode != http.StatusOK {
+		return hanwebv1beta1.HealthFalse
+	}
+
+	return hanwebv1beta1.HealthTrue
+}
+
+func (jac *JPaasAppCR) UpdateStatus(state hanwebv1beta1.ConditionType, health hanwebv1beta1.Healthy) error {
+	var jpaasApp = jac.paasApp
+	var log = jac.log
+	jpaasApp.Status.State = state
+	jpaasApp.Status.LastUpdateTime = time.Now().Format(time.RFC3339)
+	jpaasApp.Status.Health = health
+	jpaasApp.Status.Components.AppService.NodePort = jac.paasApp.Spec.EmbeddedResource.Ports.FinalPort
+	jpaasApp.Status.Components.AppService.State = string(state)
+	err := jac.kubeClient.Status().Update(jac.context, jac.paasApp)
+	if err != nil {
+		log.Error(err, "Failed to update app status")
+		return err
 	}
 	return nil
 }

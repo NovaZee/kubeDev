@@ -39,6 +39,8 @@ type JPaasAppReconciler struct {
 //+kubebuilder:rbac:groups=hanweb.jpaas.deploy,resources=jpaasapps,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=hanweb.jpaas.deploy,resources=jpaasapps/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=hanweb.jpaas.deploy,resources=jpaasapps/finalizers,verbs=update
+//+kubebuilder:rbac:groups=hanweb.jpaas.deploy,resources=services,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=hanweb.jpaas.deploy,resources=services/status,verbs=get
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.

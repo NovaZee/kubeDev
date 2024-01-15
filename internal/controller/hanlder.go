@@ -14,5 +14,6 @@ type Reconciler interface {
 }
 
 type Process interface {
-	Init() (ctrl.Result, error)
+	InspectionInit() error
+	Finalizer() error
 }
