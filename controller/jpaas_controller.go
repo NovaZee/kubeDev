@@ -48,11 +48,12 @@ type JPaasReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.16.0/pkg/reconcile
 func (r *JPaasReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	//logger := log.FromContext(ctx)
-	//defer logger.Info("JPaasReconciler End")
+	//logge1r := log.FromContext(ctx)
+	//defer1 logger.Info("JPaasReconciler End")
 	var log = r.Log.WithValues(
 		"JPaas", req.NamespacedName)
 	log.Info("JPaasReconciler Start")
+
 	defer log.Info("JPaasReconciler End")
 
 	paasCr, err := paasterm.NewJPaasCR(ctx, req, log, r.Client)
