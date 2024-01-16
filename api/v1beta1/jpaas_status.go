@@ -26,12 +26,12 @@ type ConditionType string
 const (
 	ConditionAvailable ConditionType = "Available"
 	ConditionHealthy   ConditionType = "Healthy"
-	ConditionRunning                 = "Running"
-	ConditionCreating                = "Creating"
-	ConditionUpgrading               = "Upgrading"
-	ConditionFailed                  = "Failed"
-	ConditionDeleted                 = "Deleted"
-	ConditionUnInit                  = "Uninitialized"
+	ConditionRunning   ConditionType = "Running"
+	ConditionCreating  ConditionType = "Creating"
+	ConditionUpgrading ConditionType = "Upgrading"
+	ConditionFailed    ConditionType = "Failed"
+	ConditionDeleted   ConditionType = "Deleted"
+	ConditionUnInit    ConditionType = "Uninitialized"
 )
 
 // ConditionType defines the condition

@@ -81,8 +81,8 @@ type JPaasAppStatus struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
 	// The overall state of the app
-	State      ConditionType     `json:"state"`
-	Components *ComponentsStatus `json:"components"`
+	State      ConditionType    `json:"state"`
+	Components ComponentsStatus `json:"components"`
 	// Last update timestamp for this status.
 	LastUpdateTime string `json:"lastUpdateTime,omitempty"`
 	//是否健康检查 不采用http probe,和crd实现冲突

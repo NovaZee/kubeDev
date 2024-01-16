@@ -11,6 +11,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"net/http"
+	"reflect"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -42,7 +43,9 @@ func NewJPaasAppCR(ctx context.Context, req ctrl.Request, log logr.Logger, c cli
 }
 
 func (jac *JPaasAppCR) PaasAppReconcile() (ctrl.Result, error) {
-	// 每一步执行按照先后顺序,如果有错误,则返回错误,整个系统在当前节点存在问题,如果当前节点状态需要提交,则及时更新,避免在下一阶段失败时丢弃
+	// 每一步执行按照先后顺序,如果有错误,则返回错误,整个系统在当前节点存在问题,如果当前节点状态需要提交,则及时更新,避免在下一阶段失败时丢弃(或者在defer中更新)
+	// update和status的更新,提交后都会拿到最新的状态,update的结果不会有修改的status的结果,因为提交的是spec不是status
+
 	// step zero: 优先级最高,调合前置判断 初始化/删除 status:state:creating/failed
 	//	1: 获取当前的cr,获取不到直接返回,不进行后续操作（后续判断是否在获取不到的时候检查父级CRD中的关联关系,如果存在则进行CR的初始化)
 	//	2: 判断DeletionTimestamp,判断当前操作是否为删除操作,如果是删除操作,则执行删除操作,并且返回,不进行后续操作
@@ -58,21 +61,21 @@ func (jac *JPaasAppCR) PaasAppReconcile() (ctrl.Result, error) {
 	var log = jac.log
 	// ========step zero:调合前置判断 初始化/删除==========
 	var jpaasApp = new(hanwebv1beta1.JPaasApp)
-	defer func() {
-		// ========step final更新状态==========
-		if jpaasApp != nil && jpaasApp.ObjectMeta.DeletionTimestamp.IsZero() {
-			err := jac.kubeClient.Status().Update(jac.context, jac.paasApp)
-			if err != nil {
-				log.Error(err, "Failed to update status app status")
-			}
-
-			err = jac.kubeClient.Update(jac.context, jac.paasApp)
-			if err != nil {
-				log.Error(err, "Failed to update app status")
-			}
-
-		}
-	}()
+	//defer func() {
+	//	// ========step final更新状态==========
+	//	if jpaasApp != nil && jpaasApp.ObjectMeta.DeletionTimestamp.IsZero() {
+	//		err := jac.kubeClient.Status().Update(jac.context, jac.paasApp)
+	//		if err != nil {
+	//			log.Error(err, "Failed to update status app status")
+	//		}
+	//
+	//		err = jac.kubeClient.Update(jac.context, jac.paasApp)
+	//		if err != nil {
+	//			log.Error(err, "Failed to update app status")
+	//		}
+	//
+	//	}
+	//}()
 	defer func() {
 		if err := recover(); err != nil {
 			log.Error(fmt.Errorf("%v", err), "panic")
@@ -130,6 +133,7 @@ func (jac *JPaasAppCR) InspectionInit() error {
 	var err error
 	var deployment = &v1.Deployment{}
 	var service = &corev1.Service{}
+	oldStatus := jpaasApp.Status.DeepCopy()
 	deploymentErr := jac.inspectionComponents(deployment)
 	if deploymentErr != nil && errors.IsNotFound(deploymentErr) {
 		deployment = utils.NewDeployment(jpaasApp)
@@ -137,11 +141,16 @@ func (jac *JPaasAppCR) InspectionInit() error {
 		if err = controllerutil.SetControllerReference(jpaasApp, deployment, jac.scheme); err != nil {
 			return err
 		}
+		jpaasApp.Status.Components.AppDeployment.Name = deployment.Name
+		jpaasApp.Status.Components.AppDeployment.State = string(hanwebv1beta1.ConditionCreating)
 		if err = r.Create(ctx, deployment); err != nil {
 			log.Error(err, "create deploy failed")
+			jpaasApp.Status.Components.AppDeployment.State = string(hanwebv1beta1.ConditionFailed)
 			return err
 		}
 	}
+	jpaasApp.Status.Components.AppDeployment.State = string(hanwebv1beta1.ConditionAvailable)
+
 	serviceErr := jac.inspectionService(service)
 	if serviceErr != nil && errors.IsNotFound(serviceErr) {
 		// init svc
@@ -149,27 +158,36 @@ func (jac *JPaasAppCR) InspectionInit() error {
 		if err = controllerutil.SetControllerReference(jpaasApp, service, jac.scheme); err != nil {
 			return err
 		}
+		jpaasApp.Status.Health = hanwebv1beta1.HealthFalse
+		jpaasApp.Status.Components.AppService.Name = service.Name
+		jpaasApp.Status.Components.AppService.State = string(hanwebv1beta1.ConditionCreating)
+
+		jpaasApp.Status.Components.AppService.State = string(hanwebv1beta1.ConditionCreating)
 		if err = r.Create(ctx, service); err != nil {
 			log.Error(err, "create service failed")
+			jpaasApp.Status.Components.AppService.State = string(hanwebv1beta1.ConditionFailed)
 			return err
 		}
-		status := &hanwebv1beta1.ComponentsStatus{
-			AppService: hanwebv1beta1.AppComponentServiceStatus{
-				Name:  service.Name,
-				State: string(hanwebv1beta1.ConditionAvailable),
-			},
-		}
-		jpaasApp.Status.Components = status
-		jpaasApp.Status.Health = hanwebv1beta1.HealthFalse
+		jpaasApp.Status.Components.AppService.NodePort = utils.GetHealthClusterIpPort(service)
+	}
+	jpaasApp.Status.Components.AppService.State = string(hanwebv1beta1.ConditionAvailable)
+
+	if reflect.DeepEqual(oldStatus, jpaasApp.Status) {
+		// 状态没有变化，不需要再次触发 reconcile
+		return nil
+	} else {
 		jpaasApp.Status.LastUpdateTime = time.Now().Format(time.RFC3339)
 		jpaasApp.Status.State = hanwebv1beta1.ConditionCreating
-
+		err = jac.UpdateStatus(hanwebv1beta1.ConditionAvailable, hanwebv1beta1.HealthFalse)
+		if err != nil {
+			return err
+		}
+		jpaasApp.Spec.EmbeddedResource.Ports.FinalPort = utils.GetHealthClusterIpPort(service)
+		err = jac.kubeClient.Update(ctx, jpaasApp)
+		if err != nil {
+			return err
+		}
 	}
-	err = jac.UpdateStatus(hanwebv1beta1.ConditionAvailable, hanwebv1beta1.HealthFalse)
-	if err != nil {
-		return err
-	}
-	jpaasApp.Spec.EmbeddedResource.Ports.FinalPort = utils.GetHealthClusterIpPort(service)
 	return nil
 }
 
@@ -282,8 +300,6 @@ func (jac *JPaasAppCR) UpdateStatus(state hanwebv1beta1.ConditionType, health ha
 	jpaasApp.Status.State = state
 	jpaasApp.Status.LastUpdateTime = time.Now().Format(time.RFC3339)
 	jpaasApp.Status.Health = health
-	jpaasApp.Status.Components.AppService.NodePort = jac.paasApp.Spec.EmbeddedResource.Ports.FinalPort
-	jpaasApp.Status.Components.AppService.State = string(state)
 	err := jac.kubeClient.Status().Update(jac.context, jac.paasApp)
 	if err != nil {
 		log.Error(err, "Failed to update app status")

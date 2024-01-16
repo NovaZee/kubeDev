@@ -66,7 +66,7 @@ func (r *JPaasAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		return paasReconcile, err
 	}
 
-	return ctrl.Result{}, nil
+	return paasReconcile, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
