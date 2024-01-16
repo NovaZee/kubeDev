@@ -76,7 +76,7 @@ type AppSpec struct {
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
-// +kubebuilder:printcolumn:name="Type",type="string",JSONPath=".spec.type",description="The type of client"
+// +kubebuilder:printcolumn:name="Type",type="string",JSONPath=".spec.type",description="The type of paasterm"
 // +kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.conditions[].type",description="The status of Redis Cluster"
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp",description="The age of the resource"
 

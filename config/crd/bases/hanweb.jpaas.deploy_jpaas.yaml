@@ -15,7 +15,7 @@ spec:
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
-    - description: The type of client
+    - description: The type of paasterm
       jsonPath: .spec.type
       name: Type
       type: string

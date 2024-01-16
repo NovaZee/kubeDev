@@ -124,7 +124,7 @@ type AppComponentServiceStatus struct {
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
-// +kubebuilder:printcolumn:name="Type",type="string",JSONPath=".spec.type",description="The type of client"
+// +kubebuilder:printcolumn:name="Type",type="string",JSONPath=".spec.type",description="The type of paasterm"
 // +kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.health",description="The status of paasApp"
 
 // JPaasApp is the Schema for the jpaasapps API

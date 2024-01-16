@@ -19,7 +19,7 @@ package controller
 import (
 	"context"
 	hanwebv1beta1 "github.com/NovaZee/kubeDev/api/v1beta1"
-	hanwebv1client "github.com/NovaZee/kubeDev/client"
+	"github.com/NovaZee/kubeDev/controller/paasterm"
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -27,12 +27,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-// JPaasReconciler reconciles a client object
+// JPaasReconciler reconciles a paasterm object
 type JPaasReconciler struct {
 	client.Client
-	Scheme  *runtime.Scheme
-	Log     logr.Logger
-	Handler *JPaasHandler
+	Scheme *runtime.Scheme
+	Log    logr.Logger
 }
 
 //+kubebuilder:rbac:groups=hanweb.jpaas.deploy,resources=jpaas,verbs=get;list;watch;create;update;patch;delete
@@ -42,7 +41,7 @@ type JPaasReconciler struct {
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
 // TODO(user): Modify the Reconcile function to compare the state specified by
-// the client object against the actual cluster state, and then
+// the paasterm object against the actual cluster state, and then
 // perform operations to make the cluster state reflect the state specified by
 // the user.
 //
@@ -56,7 +55,7 @@ func (r *JPaasReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	log.Info("JPaasReconciler Start")
 	defer log.Info("JPaasReconciler End")
 
-	paasCr, err := hanwebv1client.NewJPaasCR(ctx, req, log, r.Client)
+	paasCr, err := paasterm.NewJPaasCR(ctx, req, log, r.Client)
 	if err != nil {
 		return reconcile.Result{}, err
 	}

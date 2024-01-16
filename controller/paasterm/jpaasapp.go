@@ -1,10 +1,10 @@
-package client
+package paasterm
 
 import (
 	"context"
 	"fmt"
 	hanwebv1beta1 "github.com/NovaZee/kubeDev/api/v1beta1"
-	utils "github.com/NovaZee/kubeDev/internal/util"
+	utils "github.com/NovaZee/kubeDev/controller/util"
 	"github.com/go-logr/logr"
 	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"

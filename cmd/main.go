@@ -18,6 +18,7 @@ package main
 
 import (
 	"flag"
+	"github.com/NovaZee/kubeDev/controller"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -36,7 +37,6 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	hanwebv1beta1 "github.com/NovaZee/kubeDev/api/v1beta1"
-	"github.com/NovaZee/kubeDev/internal/controller"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -99,11 +99,8 @@ func main() {
 		Log:    ctrl.Log.WithName("controllers").WithName("JPaas"),
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
-		Handler: &controller.JPaasHandler{
-			Check: controller.NewJPaasChecker(ctrl.Log.WithName("controllers").WithName("JPaasCluster")),
-		},
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "client")
+		setupLog.Error(err, "unable to create controller", "controller", "paasterm")
 		os.Exit(1)
 	}
 

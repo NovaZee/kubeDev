@@ -19,7 +19,7 @@ package controller
 import (
 	"context"
 	hanwebv1beta1 "github.com/NovaZee/kubeDev/api/v1beta1"
-	hanwebv1client "github.com/NovaZee/kubeDev/client"
+	"github.com/NovaZee/kubeDev/controller/paasterm"
 	"github.com/go-logr/logr"
 	appv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -57,7 +57,7 @@ func (r *JPaasAppReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	log.Info("JPaasAppReconciler Start")
 	defer log.Info("JPaasAppReconciler End")
 
-	paasAppCr, err := hanwebv1client.NewJPaasAppCR(ctx, req, log, r.Client, r.Scheme)
+	paasAppCr, err := paasterm.NewJPaasAppCR(ctx, req, log, r.Client, r.Scheme)
 	if err != nil {
 		return reconcile.Result{}, err
 	}

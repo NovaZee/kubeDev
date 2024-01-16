@@ -1,5 +1,5 @@
 apiVersion: hanweb.jpaas.deploy/v1beta1
-kind: client
+kind: paasterm
 metadata:
   labels:
     app.kubernetes.io/name: jpaas
