@@ -10,7 +10,7 @@ import (
 )
 
 func parseTemplate(templateName string, app *v1beta1.JPaasApp) []byte {
-	tmpl, err := template.ParseFiles("internal/template/" + templateName + ".yaml")
+	tmpl, err := template.ParseFiles("/controller/template/" + templateName + ".yaml")
 	if err != nil {
 		panic(err)
 	}
@@ -41,7 +41,8 @@ func NewService(app *v1beta1.JPaasApp) *corev1.Service {
 }
 
 func parseAppTemplate(templateName string, app v1beta1.JPaas) []byte {
-	tmpl, err := template.ParseFiles("internal/template/" + templateName + ".yaml")
+
+	tmpl, err := template.ParseFiles("/controller/template/" + templateName + ".yaml")
 	if err != nil {
 		panic(err)
 	}

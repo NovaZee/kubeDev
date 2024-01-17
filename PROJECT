@@ -17,6 +17,10 @@ resources:
   kind: JPaas
   path: github.com/NovaZee/kubeDev/api/v1beta1
   version: v1beta1
+  webhooks:
+    defaulting: true
+    validation: true
+    webhookVersion: v1
 - api:
     crdVersion: v1
     namespaced: true
@@ -26,4 +30,8 @@ resources:
   kind: JPaasApp
   path: github.com/NovaZee/kubeDev/api/v1beta1
   version: v1beta1
+  webhooks:
+    defaulting: true
+    validation: true
+    webhookVersion: v1
 version: "3"

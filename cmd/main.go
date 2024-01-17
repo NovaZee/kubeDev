@@ -18,12 +18,15 @@ package main
 
 import (
 	"flag"
-	"github.com/NovaZee/kubeDev/controller"
+	"os"
+
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
-	"os"
+
+	"github.com/NovaZee/kubeDev/controller"
+
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
@@ -113,6 +116,18 @@ func main() {
 		os.Exit(1)
 	}
 
+	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
+		if err = (&hanwebv1beta1.JPaasApp{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "JPaasApp")
+			os.Exit(1)
+		}
+	}
+	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
+		if err = (&hanwebv1beta1.JPaas{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "JPaas")
+			os.Exit(1)
+		}
+	}
 	//+kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
