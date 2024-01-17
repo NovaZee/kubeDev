@@ -5,4 +5,4 @@ kind: Kustomization
 images:
 - name: controller
   newName: harbor.hanweb.com/kubehan/kubedev
-  newTag: v1.0.3
+  newTag: v2.0.0
