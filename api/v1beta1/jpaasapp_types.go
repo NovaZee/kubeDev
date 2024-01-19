@@ -107,7 +107,7 @@ type AppComponentsStatus struct {
 	Name string `json:"name"`
 
 	// The state of the component.
-	State string `json:"state"`
+	State ConditionType `json:"state"`
 }
 
 // AppComponentServiceStatus represents the state of a Kubernetes service.
@@ -116,7 +116,7 @@ type AppComponentServiceStatus struct {
 	Name string `json:"name"`
 
 	// The state of the component.
-	State string `json:"state"`
+	State ConditionType `json:"state"`
 
 	// (Optional) The node port, present when `accessScope` is `NodePort`.
 	NodePort int32 `json:"nodePort,omitempty"`

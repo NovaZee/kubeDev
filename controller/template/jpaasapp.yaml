@@ -11,16 +11,20 @@ metadata:
   namespace: {{.ObjectMeta.Namespace}}
 spec:
   image:
-    name: {{printf "%s:%s" .Spec.ImageUrl (index .Spec.AppRefs 0).Version}}
+    name: {{printf "%s%s:%s" .Spec.ImageUrl (index .Spec.AppRefs 0).Name (index .Spec.AppRefs 0).Version}}
   embeddedResource:
     replicas: 1
     accessScope: {{(index .Spec.AppRefs 0).AccessScope}}
     ports:
       port: 8080
-      Scope: NodePort
+      Scope: ClusterIP
       Name: Health
+  env:
+  {{range .Spec.CommonEnv}}
+  - name: {{.Name}}
+    value: {{.Value}}
+  {{end}}
   version: {{(index .Spec.AppRefs 0).Version}}
-  env: {{.Spec.CommonEnv}}
   health: false
   type: {{(index .Spec.AppRefs 0).Type}}
   resources:

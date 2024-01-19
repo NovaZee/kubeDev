@@ -31,6 +31,7 @@ const (
 	ConditionUpgrading ConditionType = "Upgrading"
 	ConditionFailed    ConditionType = "Failed"
 	ConditionDeleted   ConditionType = "Deleted"
+	ConditionDeleting  ConditionType = "Deleting"
 	ConditionUnInit    ConditionType = "Uninitialized"
 )
 

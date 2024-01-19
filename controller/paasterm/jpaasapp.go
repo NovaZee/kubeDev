@@ -61,21 +61,6 @@ func (jac *JPaasAppCR) PaasAppReconcile() (ctrl.Result, error) {
 	var log = jac.log
 	// ========step zero:调合前置判断 初始化/删除==========
 	var jpaasApp = new(hanwebv1beta1.JPaasApp)
-	//defer func() {
-	//	// ========step final更新状态==========
-	//	if jpaasApp != nil && jpaasApp.ObjectMeta.DeletionTimestamp.IsZero() {
-	//		err := jac.kubeClient.Status().Update(jac.context, jac.paasApp)
-	//		if err != nil {
-	//			log.Error(err, "Failed to update status app status")
-	//		}
-	//
-	//		err = jac.kubeClient.Update(jac.context, jac.paasApp)
-	//		if err != nil {
-	//			log.Error(err, "Failed to update app status")
-	//		}
-	//
-	//	}
-	//}()
 	defer func() {
 		if err := recover(); err != nil {
 			log.Error(fmt.Errorf("%v", err), "panic")
@@ -109,10 +94,16 @@ func (jac *JPaasAppCR) PaasAppReconcile() (ctrl.Result, error) {
 	healthy := jac.CheckHealthy()
 	if !utils.Healthy(healthy) {
 		log.Info("CheckHealthy", "result", "App healthy False,RequeueAfter 15s")
-		return ctrl.Result{RequeueAfter: 15}, nil
+		return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
 	}
 	log.Info("CheckHealthy", "result", healthy)
-	jac.paasApp.Status.Health = healthy
+	if jac.paasApp.Status.Health != healthy {
+		jac.paasApp.Status.Health = healthy
+		err = jac.UpdateStatus(hanwebv1beta1.ConditionAvailable, hanwebv1beta1.HealthTrue)
+		if err != nil {
+			return ctrl.Result{RequeueAfter: 15 * time.Second}, nil
+		}
+	}
 	// ========step two==========
 
 	// ========step final更新状态==========
@@ -126,6 +117,7 @@ func (jac *JPaasAppCR) PaasAppReconcile() (ctrl.Result, error) {
 }
 
 func (jac *JPaasAppCR) InspectionInit() error {
+	// 初始化 和具体资源的变动状态调合
 	var jpaasApp = jac.paasApp
 	var log = jac.log
 	var ctx = jac.context
@@ -133,6 +125,8 @@ func (jac *JPaasAppCR) InspectionInit() error {
 	var err error
 	var deployment = &v1.Deployment{}
 	var service = &corev1.Service{}
+	var deploymentState = jpaasApp.Status.Components.AppDeployment.State
+	var svcState = jpaasApp.Status.Components.AppService.State
 	oldStatus := jpaasApp.Status.DeepCopy()
 	deploymentErr := jac.inspectionComponents(deployment)
 	if deploymentErr != nil && errors.IsNotFound(deploymentErr) {
@@ -142,14 +136,18 @@ func (jac *JPaasAppCR) InspectionInit() error {
 			return err
 		}
 		jpaasApp.Status.Components.AppDeployment.Name = deployment.Name
-		jpaasApp.Status.Components.AppDeployment.State = string(hanwebv1beta1.ConditionCreating)
+		deploymentState = hanwebv1beta1.ConditionCreating
 		if err = r.Create(ctx, deployment); err != nil {
 			log.Error(err, "create deploy failed")
-			jpaasApp.Status.Components.AppDeployment.State = string(hanwebv1beta1.ConditionFailed)
+			deploymentState = hanwebv1beta1.ConditionFailed
 			return err
 		}
+		jpaasApp.Status.Components.AppDeployment.State = deploymentState
+		return nil
 	}
-	jpaasApp.Status.Components.AppDeployment.State = string(hanwebv1beta1.ConditionAvailable)
+	if !deployment.CreationTimestamp.IsZero() {
+		deploymentState = hanwebv1beta1.ConditionDeleting
+	}
 
 	serviceErr := jac.inspectionService(service)
 	if serviceErr != nil && errors.IsNotFound(serviceErr) {
@@ -160,20 +158,22 @@ func (jac *JPaasAppCR) InspectionInit() error {
 		}
 		jpaasApp.Status.Health = hanwebv1beta1.HealthFalse
 		jpaasApp.Status.Components.AppService.Name = service.Name
-		jpaasApp.Status.Components.AppService.State = string(hanwebv1beta1.ConditionCreating)
-
-		jpaasApp.Status.Components.AppService.State = string(hanwebv1beta1.ConditionCreating)
+		svcState = hanwebv1beta1.ConditionCreating
 		if err = r.Create(ctx, service); err != nil {
 			log.Error(err, "create service failed")
-			jpaasApp.Status.Components.AppService.State = string(hanwebv1beta1.ConditionFailed)
+			svcState = hanwebv1beta1.ConditionFailed
 			return err
 		}
 		jpaasApp.Status.Components.AppService.NodePort = utils.GetHealthClusterIpPort(service)
+		jpaasApp.Status.Components.AppService.State = svcState
+		return nil
 	}
-	jpaasApp.Status.Components.AppService.State = string(hanwebv1beta1.ConditionAvailable)
+	if !service.DeletionTimestamp.IsZero() {
+		svcState = hanwebv1beta1.ConditionDeleting
+	}
 
-	if reflect.DeepEqual(oldStatus, jpaasApp.Status) {
-		// 状态没有变化，不需要再次触发 reconcile
+	if reflect.DeepEqual(*oldStatus, jpaasApp.Status) {
+		log.Info(" 资源初始化状态没有变化，不需要再次触发初始化reconcile")
 		return nil
 	} else {
 		jpaasApp.Status.LastUpdateTime = time.Now().Format(time.RFC3339)

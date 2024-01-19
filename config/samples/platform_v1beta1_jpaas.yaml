@@ -14,11 +14,18 @@ spec:
   namespace: default
   version: "0.1"
   versionAligned: false
-  imageUrl: nginx
+  imageUrl: harbor.hanweb.com/product/
+  commonEnv:
+    - name: JAVA_OPTS
+      value: -Xms128m -Xmx256m
+    - name: TZ
+      value: Asia/Shanghai
+    - name: SPRING_PROFILES_ACTIVE
+      value: prod
   appRefs:
-    - name: common-nginx
-      version: 1.7.9
-      accessScope: NodePort
+    - name: jpaas-jsup-be
+      version: v4.0.0_10
+      accessScope: ClusterIP
       appCrStatus: Uninitialized
   Initialized: false
   name: jpaas-v1
