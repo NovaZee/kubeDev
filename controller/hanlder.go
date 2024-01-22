@@ -9,6 +9,7 @@ type Reconciler interface {
 }
 
 type Process interface {
-	InspectionInit() error
+	ResourceInitCheck() error
+	ResourceRuntimeCheck() error
 	Finalizer() error
 }

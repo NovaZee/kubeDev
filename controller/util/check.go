@@ -15,9 +15,9 @@ func Healthy(health hanwebv1beta1.Healthy) bool {
 func GetHealthClusterIpPort(s *corev1.Service) int32 {
 	for _, port := range s.Spec.Ports {
 		if port.Name == "health" {
-			//return port.TargetPort.IntVal\
+			return port.TargetPort.IntVal
 			//测试 使用NodePort
-			return port.NodePort
+			//return port.NodePort
 		}
 	}
 	return 0

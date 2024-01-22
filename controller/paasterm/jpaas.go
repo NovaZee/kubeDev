@@ -42,7 +42,7 @@ func (jc *JPaasCR) PaasReconcile() (ctrl.Result, error) {
 		return ctrl.Result{}, err
 	}
 	if !jc.paas.Spec.Initialized {
-		return ctrl.Result{}, jc.InspectionInit()
+		return ctrl.Result{}, jc.ResourceInitCheck()
 	}
 	err = jc.checkAppCr()
 	if err != nil {
@@ -53,7 +53,7 @@ func (jc *JPaasCR) PaasReconcile() (ctrl.Result, error) {
 	return ctrl.Result{}, nil
 }
 
-func (jc *JPaasCR) InspectionInit() error {
+func (jc *JPaasCR) ResourceInitCheck() error {
 	// condition 1: 部署platform,根据platform的依赖关系，部署基础应用
 	// 获取 base apps
 	var instance = jc.paas
@@ -89,6 +89,10 @@ func (jc *JPaasCR) checkAppCr() error {
 		}
 	}
 
+	return nil
+}
+
+func (jc *JPaasCR) ResourceRuntimeCheck() error {
 	return nil
 }
 

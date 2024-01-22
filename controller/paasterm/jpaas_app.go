@@ -25,6 +25,8 @@ type JPaasAppCR struct {
 	context    context.Context
 	request    ctrl.Request
 	log        logr.Logger
+
+	observer ObservedAppsState
 }
 
 // JPaasAppFinalizerName name of our custom finalizer
@@ -39,6 +41,7 @@ func NewJPaasAppCR(ctx context.Context, req ctrl.Request, log logr.Logger, c cli
 		log:        log,
 		kubeClient: c,
 		scheme:     scheme,
+		observer:   ObservedAppsState{},
 	}, nil
 }
 
@@ -85,7 +88,12 @@ func (jac *JPaasAppCR) PaasAppReconcile() (ctrl.Result, error) {
 		}
 	}
 	// ========step one:资源初始化==========
-	err = jac.InspectionInit()
+	err = jac.ResourceInitCheck()
+	if err != nil {
+		log.Error(err, "Failed to inspection the current app state")
+		return ctrl.Result{}, err
+	}
+	err = jac.ResourceRuntimeCheck()
 	if err != nil {
 		log.Error(err, "Failed to inspection the current app state")
 		return ctrl.Result{}, err
@@ -116,8 +124,8 @@ func (jac *JPaasAppCR) PaasAppReconcile() (ctrl.Result, error) {
 	return ctrl.Result{}, nil
 }
 
-func (jac *JPaasAppCR) InspectionInit() error {
-	// 初始化 和具体资源的变动状态调合
+func (jac *JPaasAppCR) ResourceInitCheck() error {
+	// 初始化检查
 	var jpaasApp = jac.paasApp
 	var log = jac.log
 	var ctx = jac.context
@@ -127,9 +135,16 @@ func (jac *JPaasAppCR) InspectionInit() error {
 	var service = &corev1.Service{}
 	var deploymentState = jpaasApp.Status.Components.AppDeployment.State
 	var svcState = jpaasApp.Status.Components.AppService.State
+	var oldSvcPort = jpaasApp.Spec.EmbeddedResource.Ports.FinalPort
 	oldStatus := jpaasApp.Status.DeepCopy()
+	//deployment
 	deploymentErr := jac.inspectionComponents(deployment)
-	if deploymentErr != nil && errors.IsNotFound(deploymentErr) {
+	if deploymentErr == nil {
+		jac.observer.deploy = deployment
+		if !deployment.DeletionTimestamp.IsZero() {
+			deploymentState = hanwebv1beta1.ConditionDeleting
+		}
+	} else if deploymentErr != nil && errors.IsNotFound(deploymentErr) {
 		deployment = utils.NewDeployment(jpaasApp)
 		// init deployment
 		if err = controllerutil.SetControllerReference(jpaasApp, deployment, jac.scheme); err != nil {
@@ -143,14 +158,15 @@ func (jac *JPaasAppCR) InspectionInit() error {
 			return err
 		}
 		jpaasApp.Status.Components.AppDeployment.State = deploymentState
-		return nil
 	}
-	if !deployment.CreationTimestamp.IsZero() {
-		deploymentState = hanwebv1beta1.ConditionDeleting
-	}
-
+	// service
 	serviceErr := jac.inspectionService(service)
-	if serviceErr != nil && errors.IsNotFound(serviceErr) {
+	if serviceErr == nil {
+		jac.observer.service = service
+		if !service.DeletionTimestamp.IsZero() {
+			svcState = hanwebv1beta1.ConditionDeleting
+		}
+	} else if serviceErr != nil && errors.IsNotFound(serviceErr) {
 		// init svc
 		service = utils.NewService(jpaasApp)
 		if err = controllerutil.SetControllerReference(jpaasApp, service, jac.scheme); err != nil {
@@ -164,12 +180,10 @@ func (jac *JPaasAppCR) InspectionInit() error {
 			svcState = hanwebv1beta1.ConditionFailed
 			return err
 		}
+		svcState = hanwebv1beta1.ConditionAvailable
 		jpaasApp.Status.Components.AppService.NodePort = utils.GetHealthClusterIpPort(service)
 		jpaasApp.Status.Components.AppService.State = svcState
-		return nil
-	}
-	if !service.DeletionTimestamp.IsZero() {
-		svcState = hanwebv1beta1.ConditionDeleting
+		jpaasApp.Status.Health = hanwebv1beta1.HealthFalse
 	}
 
 	if reflect.DeepEqual(*oldStatus, jpaasApp.Status) {
@@ -177,17 +191,24 @@ func (jac *JPaasAppCR) InspectionInit() error {
 		return nil
 	} else {
 		jpaasApp.Status.LastUpdateTime = time.Now().Format(time.RFC3339)
-		jpaasApp.Status.State = hanwebv1beta1.ConditionCreating
-		err = jac.UpdateStatus(hanwebv1beta1.ConditionAvailable, hanwebv1beta1.HealthFalse)
+		jpaasApp.Status.State = hanwebv1beta1.ConditionAvailable
+		err = jac.kubeClient.Status().Update(jac.context, jpaasApp)
 		if err != nil {
+			log.Error(err, "Failed to update app status")
 			return err
 		}
-		jpaasApp.Spec.EmbeddedResource.Ports.FinalPort = utils.GetHealthClusterIpPort(service)
-		err = jac.kubeClient.Update(ctx, jpaasApp)
-		if err != nil {
-			return err
+		if oldSvcPort != utils.GetHealthClusterIpPort(service) {
+			jpaasApp.Spec.EmbeddedResource.Ports.FinalPort = utils.GetHealthClusterIpPort(service)
+			err = jac.kubeClient.Update(ctx, jpaasApp)
+			if err != nil {
+				return err
+			}
 		}
 	}
+	return nil
+}
+
+func (jac *JPaasAppCR) ResourceRuntimeCheck() error {
 	return nil
 }
 
@@ -240,6 +261,10 @@ func (jac *JPaasAppCR) Finalizer() error {
 			if err := r.Update(ctx, jpassApp); err != nil {
 				return err
 			}
+			jac.paasApp.Status.State = hanwebv1beta1.ConditionDeleted
+			if err := r.Status().Update(ctx, jpassApp); err != nil {
+				return err
+			}
 		}
 
 		// Stop reconciliation as the item is being deleted
@@ -278,7 +303,7 @@ func (jac *JPaasAppCR) CheckHealthy() hanwebv1beta1.Healthy {
 		Timeout: time.Second * 1, // 设置超时时间为10秒
 	}
 	// 获取svc的ip
-	url := fmt.Sprintf("http://192.168.5.56:%d", jac.paasApp.Spec.EmbeddedResource.Ports.FinalPort)
+	url := fmt.Sprintf("http://%s.%s.svc.cluster.local:%d", jac.request.Name, jac.request.Namespace, jac.paasApp.Status.Components.AppService.NodePort)
 	resp, err := client.Get(url)
 	if err != nil {
 		jac.log.Info("CheckHealthy", "err", err)

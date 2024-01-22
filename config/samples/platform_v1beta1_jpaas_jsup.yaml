@@ -1,0 +1,32 @@
+apiVersion: hanweb.jpaas.deploy/v1beta1
+kind: JPaas
+metadata:
+  finalizers:
+    - hanweb.jpaas.deploy/finalizer
+  labels:
+    app.kubernetes.io/name: jpaas
+    app.kubernetes.io/instance: jpaas-sample
+    app.kubernetes.io/part-of: kubedev
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: kubedev
+  name: jpaas-v1
+spec:
+  namespace: default
+  version: "0.1"
+  versionAligned: false
+  imageUrl: harbor.hanweb.com/product/
+  commonEnv:
+    - name: JAVA_OPTS
+      value: -Xms128m -Xmx256m
+    - name: TZ
+      value: Asia/Shanghai
+    - name: SPRING_PROFILES_ACTIVE
+      value: prod
+  appRefs:
+    - name: jpaas-jsup-be
+      version: v4.0.0_10
+      accessScope: ClusterIP
+      appCrStatus: Uninitialized
+  Initialized: false
+  name: jpaas-v1
+  needUpgrade: false
