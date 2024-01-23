@@ -10,8 +10,8 @@ metadata:
     app.kubernetes.io/managed-by: kustomize
     app.kubernetes.io/created-by: kubedev
   name: jpaas-v1
+  namespace: meetingin
 spec:
-  namespace: default
   version: "0.1"
   versionAligned: false
   imageUrl: harbor.hanweb.com/product/
@@ -22,9 +22,11 @@ spec:
       value: Asia/Shanghai
     - name: SPRING_PROFILES_ACTIVE
       value: prod
+    - name: config_encryption_key
+      value: default
   appRefs:
-    - name: jpaas-jsup-be
-      version: v4.0.0_10
+    - name: jmportal-web-be
+      version: v6.3.6.2_220
       accessScope: ClusterIP
       appCrStatus: Uninitialized
   Initialized: false

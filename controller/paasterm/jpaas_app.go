@@ -93,6 +93,7 @@ func (jac *JPaasAppCR) PaasAppReconcile() (ctrl.Result, error) {
 		log.Error(err, "Failed to inspection the current app state")
 		return ctrl.Result{}, err
 	}
+	// 备份,扩容等操作
 	err = jac.ResourceRuntimeCheck()
 	if err != nil {
 		log.Error(err, "Failed to inspection the current app state")
@@ -303,7 +304,7 @@ func (jac *JPaasAppCR) CheckHealthy() hanwebv1beta1.Healthy {
 		Timeout: time.Second * 1, // 设置超时时间为10秒
 	}
 	// 获取svc的ip
-	url := fmt.Sprintf("http://%s.%s.svc.cluster.local:%d", jac.request.Name, jac.request.Namespace, jac.paasApp.Status.Components.AppService.NodePort)
+	url := fmt.Sprintf("http://%s.%s.svc.cluster.local:%d/%s/health", jac.request.Name, jac.request.Namespace, jac.paasApp.Status.Components.AppService.NodePort, jac.request.Name)
 	resp, err := client.Get(url)
 	if err != nil {
 		jac.log.Info("CheckHealthy", "err", err)

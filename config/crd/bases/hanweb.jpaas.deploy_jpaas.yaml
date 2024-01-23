@@ -183,8 +183,6 @@ spec:
                 description: 镜像前缀地址 除了版本号
                 type: string
               name:
-                type: string
-              namespace:
                 description: 应用基础属性 image当应用类型为Platform时，image可以忽略
                 type: string
               needUpgrade:
@@ -199,7 +197,6 @@ spec:
             required:
             - Initialized
             - name
-            - namespace
             - needUpgrade
             - version
             - versionAligned

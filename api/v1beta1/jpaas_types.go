@@ -43,7 +43,6 @@ type JPaasSpec struct {
 
 	//应用基础属性
 	//image当应用类型为Platform时，image可以忽略
-	Namespace   string `json:"namespace"`
 	Name        string `json:"name"`
 	Version     string `json:"version"`
 	Status      bool   `json:"status,omitempty"`

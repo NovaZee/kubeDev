@@ -116,18 +116,18 @@ func main() {
 		os.Exit(1)
 	}
 
-	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
-		if err = (&hanwebv1beta1.JPaasApp{}).SetupWebhookWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create webhook", "webhook", "JPaasApp")
-			os.Exit(1)
-		}
-	}
-	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
-		if err = (&hanwebv1beta1.JPaas{}).SetupWebhookWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create webhook", "webhook", "JPaas")
-			os.Exit(1)
-		}
-	}
+	//if os.Getenv("ENABLE_WEBHOOKS") != "false" {
+	//	if err = (&hanwebv1beta1.JPaasApp{}).SetupWebhookWithManager(mgr); err != nil {
+	//		setupLog.Error(err, "unable to create webhook", "webhook", "JPaasApp")
+	//		os.Exit(1)
+	//	}
+	//}
+	//if os.Getenv("ENABLE_WEBHOOKS") != "false" {
+	//	if err = (&hanwebv1beta1.JPaas{}).SetupWebhookWithManager(mgr); err != nil {
+	//		setupLog.Error(err, "unable to create webhook", "webhook", "JPaas")
+	//		os.Exit(1)
+	//	}
+	//}
 	//+kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {

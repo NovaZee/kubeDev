@@ -18,7 +18,7 @@ spec:
     spec:
       #hostAliases临时解决方案，后续删除
       hostAliases:
-        - ip: "192.168.0.127"
+        - ip: "10.43.73.65"
           hostnames:
             - "registrycenter-master"
       containers:
